@@ -85,3 +85,12 @@ func UpdateAvatar(userID int64, path string) error {
 	}
 	return nil
 }
+
+// FindByIDs 根据多个id进行单次查询 避免N+1
+func FindByIDs(ids []int64) ([]model.Account, error) {
+	var accounts []model.Account
+	if err := DB.Where("id in ?", ids).Find(&accounts).Error; err != nil {
+		return nil, err
+	}
+	return accounts, nil
+}

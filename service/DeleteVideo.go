@@ -1,0 +1,41 @@
+package service
+
+import (
+	"errors"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"feed/dao"
+)
+
+var ErrPermissionDenied = errors.New("permission denied")
+
+func DeleteVideo(userID, videoID int64) error {
+	video, err := dao.FindByVideoID(videoID)
+	if err != nil {
+		return err
+	}
+	if video == nil {
+		return ErrVideoNotFound
+	}
+	if video.Uploader == userID {
+		vDst := filepath.Join("./data", strings.TrimPrefix(video.VideoURL, "/uploads/"))
+		cDst := filepath.Join("./data", strings.TrimPrefix(video.CoverURL, "/uploads/"))
+		if err := os.Remove(vDst); err != nil {
+			if !os.IsNotExist(err) {
+				return err
+			}
+		}
+		if err := os.Remove(cDst); err != nil {
+			if !os.IsNotExist(err) {
+				return err
+			}
+		}
+		if err := dao.DeleteVideo(videoID); err != nil {
+			return err
+		}
+		return nil
+	}
+	return ErrPermissionDenied
+}

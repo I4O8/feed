@@ -10,6 +10,7 @@ import (
 
 func main() {
 	dao.InitSQL()
+	dao.InitRedis()
 
 	r := gin.Default()
 	r.Use(cors.New(cors.Config{
@@ -26,5 +27,9 @@ func main() {
 	r.GET("/user/getProfile", handler.GetProfile)
 	r.POST("/user/updateProfile", handler.AuthMiddleware(), handler.UpdateProfile)
 	r.POST("/video/upload", handler.AuthMiddleware(), handler.UploadVideo)
+	r.GET("/video/detail", handler.GetDetail)
+	r.GET("/video/list", handler.ListVideo)
+	r.DELETE("/video/:id", handler.AuthMiddleware(), handler.DeleteVideo)
+	r.POST("/video/reportPlay", handler.ReportPlay)
 	r.Run(":2222")
 }

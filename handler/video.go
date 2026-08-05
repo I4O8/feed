@@ -6,6 +6,7 @@ import (
 	"io"
 	"mime/multipart"
 	"path/filepath"
+	"strconv"
 
 	"feed/service"
 
@@ -17,6 +18,12 @@ type uploadStruct struct {
 	Cover    *multipart.FileHeader `form:"cover"`
 	Title    string                `form:"title" binding:"required"`
 	Describe string                `form:"describe"`
+}
+
+type list struct {
+	Cursor int64 `form:"cursor"`
+	Limit  int   `form:"limit"`
+	UserId int64 `form:"userid"`
 }
 
 // isValidVideoType 视频格式校验，仅支持 mp4，mkv
@@ -125,4 +132,104 @@ func UploadVideo(ctx *gin.Context) {
 		"coverUrl": coverURL,
 		"duration": duration,
 	})
+}
+
+// GetDetail 视频详情接口：按 videoId 返回单条视频（含发布者信息）
+func GetDetail(ctx *gin.Context) {
+	videoID, err := strconv.ParseInt(ctx.Query("videoId"), 10, 64)
+	if err != nil {
+		Fail(ctx, CodeParamError, "错误的请求参数")
+		return
+	}
+	video, err := service.GetDetail(videoID)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrVideoNotFound):
+			Fail(ctx, CodeResourceNotFound, "视频资源不存在")
+		default:
+			Fail(ctx, CodeInternalError, "服务器内部错误")
+			fmt.Printf("error:%v\n", err)
+		}
+		return
+	}
+	OK(ctx, video)
+}
+
+// ListVideo 视频列表接口：游标分页，可选按发布者过滤（userId 不传 = 全站）
+func ListVideo(ctx *gin.Context) {
+	// 绑定 query 参数（cursor 默认 0，limit 默认 20）
+	tmp := list{Cursor: 0, Limit: 20}
+	if err := ctx.ShouldBindQuery(&tmp); err != nil {
+		Fail(ctx, CodeParamError, "错误的请求参数")
+		return
+	}
+	// limit 上限 50（契约）
+	if tmp.Limit > 50 {
+		tmp.Limit = 50
+	}
+
+	videos, nextCursor, err := service.List(tmp.UserId, tmp.Cursor, tmp.Limit)
+	if err != nil {
+		Fail(ctx, CodeInternalError, "服务器内部错误")
+		fmt.Printf("error:%v\n", err)
+		return
+	}
+	OK(ctx, gin.H{
+		"videos":     videos,
+		"nextCursor": nextCursor,
+	})
+}
+
+// DeleteVideo 删除视频
+func DeleteVideo(ctx *gin.Context) {
+	userIDVal, exists := ctx.Get("UserId")
+	if !exists {
+		Fail(ctx, CodeTokenMissingOrExpired, "未登录")
+		return
+	}
+	userID, ok := userIDVal.(int64)
+	if !ok {
+		Fail(ctx, CodeTokenMissingOrExpired, "Token损坏或失效")
+		return
+	}
+	videoID, err := strconv.ParseInt(ctx.Param("id"), 10, 64)
+	if err != nil {
+		Fail(ctx, CodeParamError, "错误的请求参数")
+		return
+	}
+	if err := service.DeleteVideo(userID, videoID); err != nil {
+		switch {
+		case errors.Is(err, service.ErrPermissionDenied):
+			Fail(ctx, CodeForbidden, "没有足够的权限")
+		case errors.Is(err, service.ErrVideoNotFound):
+			Fail(ctx, CodeResourceNotFound, "内容已被删除")
+		default:
+			Fail(ctx, CodeInternalError, "服务器内部错误")
+			fmt.Printf("error:%v\n", err)
+		}
+		return
+	}
+	OK(ctx, nil)
+}
+
+// ReportPlay 播放上报接口：公开（无需登录），播放量 +1（本模块不做去重）
+func ReportPlay(ctx *gin.Context) {
+	var req struct {
+		VideoID int64 `json:"videoId" binding:"required"`
+	}
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		Fail(ctx, CodeParamError, "错误的请求参数")
+		return
+	}
+	if err := service.ReportPlay(req.VideoID); err != nil {
+		switch {
+		case errors.Is(err, service.ErrVideoNotFound):
+			Fail(ctx, CodeResourceNotFound, "视频不存在")
+		default:
+			Fail(ctx, CodeInternalError, "服务器内部错误")
+			fmt.Printf("error:%v\n", err)
+		}
+		return
+	}
+	OK(ctx, nil)
 }

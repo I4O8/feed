@@ -11,6 +11,7 @@ var (
 	VideoDir  = getEnv("VIDEO_DIR", "./data/video")
 	CoverDir  = getEnv("COVER_DIR", VideoDir+"/cover")
 	Port      = getEnv("PORT", "2222")
+	RedisAddr = getEnv("REDIS_ADDR", "localhost:6379")
 )
 
 // 获取环境变量
