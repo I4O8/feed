@@ -1,9 +1,37 @@
 package service
 
 import (
+	"context"
+	"strconv"
+
 	"feed/dao"
 	"feed/model"
+
+	"github.com/redis/go-redis/v9"
 )
+
+func listCount(videos []*model.Video) {
+	pipe := dao.RDB.Pipeline()
+	cmds := make([]*redis.MapStringStringCmd, len(videos))
+	for i := range videos {
+		cmds[i] = pipe.HGetAll(context.Background(), "video:count:"+strconv.FormatInt(videos[i].ID, 10))
+	}
+	pipe.Exec(context.Background())
+
+	for i := range cmds {
+		res, _ := cmds[i].Result()
+		if play, ok := res["play"]; ok {
+			videos[i].PlayCount, _ = strconv.ParseInt(play, 10, 64)
+		}
+		if like, ok := res["like"]; ok {
+			videos[i].LikeCount, _ = strconv.ParseInt(like, 10, 64)
+		}
+		if fav, ok := res["fav"]; ok {
+			videos[i].FavCount, _ = strconv.ParseInt(fav, 10, 64)
+		}
+
+	}
+}
 
 // List 视频列表：游标分页，可选按发布者过滤（uploaderID 为 0 = 全站）
 // 返回已组装 Publisher 的视频切片、下一页游标（0 = 没有更多）
@@ -47,6 +75,8 @@ func List(uploaderID, cursor int64, limit int) ([]*model.Video, int64, error) {
 			videos[i].Publisher = publisherInfo
 		}
 	}
+
+	listCount(videos)
 
 	// 取满 limit 才说明还有更旧的，nextCursor = 最后一条 id；没取满说明到底，nextCursor = 0
 	var nextCursor int64

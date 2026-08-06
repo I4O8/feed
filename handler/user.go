@@ -73,11 +73,13 @@ func Register(ctx *gin.Context) {
 		return
 	}
 
-	token, userID, err := service.Register(tmp.Account, tmp.Password)
+	token, userID, err := service.Register(ctx.ClientIP(), tmp.Account, tmp.Password)
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrUserExists):
 			Fail(ctx, CodeLoginNameRegistered, "用户已存在")
+		case errors.Is(err, service.ErrRatelimited):
+			Fail(ctx, CodeTooManyRequests, "注册过于频繁，请稍后再试")
 
 		default:
 			Fail(ctx, CodeInternalError, "服务器内部错误")

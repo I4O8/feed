@@ -60,3 +60,9 @@ func ReportPlay(videoid int64) error {
 	}
 	return nil
 }
+
+// UpdateCounts 更新视频 播放量 点赞数 收藏量
+func UpdateCounts(id int64, play, like, fav int64) error {
+	return DB.Model(&model.Video{}).Where("id = ?", id).
+		Updates(map[string]any{"play_count": play, "like_count": like, "fav_count": fav}).Error
+}

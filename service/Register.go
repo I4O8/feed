@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"math/rand"
 	"strings"
@@ -11,6 +12,7 @@ import (
 
 var ErrUserExists = errors.New("user already exists")
 
+// generateRandomString 随机字符生成
 func generateRandomString(length int) string {
 	const charset = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 	b := make([]byte, length)
@@ -20,7 +22,12 @@ func generateRandomString(length int) string {
 	return string(b)
 }
 
-func Register(input, pwd string) (string, int64, error) {
+// Register 注册（带 IP 限流）
+func Register(ip, input, pwd string) (string, int64, error) {
+	// 入口守卫：IP 限流，超限直接拒绝
+	if err := registerRateLimit(context.Background(), ip); err != nil {
+		return "", -1, err
+	}
 	var email, pNumber *string
 
 	if strings.Contains(input, "@") {

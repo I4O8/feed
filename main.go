@@ -3,6 +3,7 @@ package main
 import (
 	"feed/dao"
 	"feed/handler"
+	"feed/service"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -11,6 +12,7 @@ import (
 func main() {
 	dao.InitSQL()
 	dao.InitRedis()
+	service.StartCountFlush()
 
 	r := gin.Default()
 	r.Use(cors.New(cors.Config{

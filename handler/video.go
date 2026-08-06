@@ -23,7 +23,7 @@ type uploadStruct struct {
 type list struct {
 	Cursor int64 `form:"cursor"`
 	Limit  int   `form:"limit"`
-	UserId int64 `form:"userid"`
+	UserId int64 `form:"userId"`
 }
 
 // isValidVideoType 视频格式校验，仅支持 mp4，mkv
@@ -212,16 +212,17 @@ func DeleteVideo(ctx *gin.Context) {
 	OK(ctx, nil)
 }
 
-// ReportPlay 播放上报接口：公开（无需登录），播放量 +1（本模块不做去重）
+// ReportPlay 播放上报接口：公开（无需登录），播放量 +1（同一设备 1 天去重）
 func ReportPlay(ctx *gin.Context) {
 	var req struct {
-		VideoID int64 `json:"videoId" binding:"required"`
+		VideoID  int64  `json:"videoId" binding:"required"`
+		DeviceID string `json:"deviceId" binding:"required"`
 	}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		Fail(ctx, CodeParamError, "错误的请求参数")
 		return
 	}
-	if err := service.ReportPlay(req.VideoID); err != nil {
+	if err := service.ReportPlay(req.VideoID, req.DeviceID); err != nil {
 		switch {
 		case errors.Is(err, service.ErrVideoNotFound):
 			Fail(ctx, CodeResourceNotFound, "视频不存在")
