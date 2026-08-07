@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"math"
 	"os"
@@ -143,6 +144,10 @@ func UploadVideo(video io.Reader, videoName string, cover []byte, coverName stri
 	videoID, err := dao.CreateVideo(&tmp)
 	if err != nil {
 		return -1, "", "", -1, err
+	}
+	// feed 扩散：把视频推给上传者的粉丝（尽力而为，失败只记日志，不影响上传）
+	if err := PublishFanoutTask(videoID, userID); err != nil {
+		fmt.Printf("fanout err: %v\n", err)
 	}
 	return videoID, videoURL, coverURL, duration, nil
 }

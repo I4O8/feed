@@ -11,6 +11,7 @@ const (
 	CodeParamError            = 40000 // 参数错误 / 缺字段
 	CodeLoginNameInvalid      = 40001 // 登录名格式不合法（非手机号也非邮箱）
 	CodePasswordLenInvalid    = 40002 // 密码长度不合法（需 6-32 位）
+	CodeSelfFollow            = 40003 // 不能关注自己
 	CodeTokenMissingOrExpired = 40100 // 未登录：token 缺失 / 无效 / 过期
 	CodeLoginNameOrPwdWrong   = 40101 // 登录名或密码错误
 	CodeOldPasswordWrong      = 40102 // 旧密码错误

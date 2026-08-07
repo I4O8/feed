@@ -13,6 +13,10 @@ func main() {
 	dao.InitSQL()
 	dao.InitRedis()
 	service.StartCountFlush()
+	if err := service.InitFeedMQ(); err != nil {
+		panic("RabbitMQ 连接失败: " + err.Error())
+	}
+	service.StartFanoutConsumer()
 
 	r := gin.Default()
 	r.Use(cors.New(cors.Config{
@@ -33,5 +37,10 @@ func main() {
 	r.GET("/video/list", handler.ListVideo)
 	r.DELETE("/video/:id", handler.AuthMiddleware(), handler.DeleteVideo)
 	r.POST("/video/reportPlay", handler.ReportPlay)
+	r.POST("/follow/:id", handler.AuthMiddleware(), handler.Follow)
+	r.DELETE("/follow/:id", handler.AuthMiddleware(), handler.Unfollow)
+	r.GET("/follow/list", handler.AuthMiddleware(), handler.FollowList)
+	r.GET("/follow/fans", handler.AuthMiddleware(), handler.FansList)
+	r.GET("/feed", handler.AuthMiddleware(), handler.Feed)
 	r.Run(":2222")
 }

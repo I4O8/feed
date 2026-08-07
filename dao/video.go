@@ -29,6 +29,15 @@ func FindByVideoID(videoID int64) (*model.Video, error) {
 	return tmp, nil
 }
 
+// FindByVideoIDs 根据多个id进行单次查询 避免N+1
+func FindByVideoIDs(videoIDs []int64) ([]*model.Video, error) {
+	var videos []*model.Video
+	if err := DB.Where("id in ?", videoIDs).Find(&videos).Error; err != nil {
+		return nil, err
+	}
+	return videos, nil
+}
+
 // ListVideos 指定发布者 翻页 单页数量
 func ListVideos(uploaderID, cursor int64, limit int) ([]*model.Video, error) {
 	videoList := make([]*model.Video, 0)
