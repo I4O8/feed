@@ -48,8 +48,30 @@ func initFollowsTable() {
 	}
 }
 
+// initLikesTable 初始化点赞表
+func initLikesTable() {
+	if DB == nil {
+		panic("DB未初始化，请先调用initUserTable()")
+	}
+	if err := DB.AutoMigrate(&model.Likes{}); err != nil {
+		panic("Likes{}表创建失败" + err.Error())
+	}
+}
+
+// initFavoritesTable 初始化收藏表
+func initFavoritesTable() {
+	if DB == nil {
+		panic("DB未初始化，请先调用initUserTable()")
+	}
+	if err := DB.AutoMigrate(&model.Favorites{}); err != nil {
+		panic("Favorites{}表创建失败" + err.Error())
+	}
+}
+
 func InitSQL() {
 	initUserTable()
 	initVideoTable()
 	initFollowsTable()
+	initLikesTable()
+	initFavoritesTable()
 }
