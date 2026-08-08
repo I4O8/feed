@@ -13,6 +13,7 @@ func main() {
 	dao.InitSQL()
 	dao.InitRedis()
 	service.StartCountFlush()
+	service.StartLikeFlush()
 	if err := service.InitFeedMQ(); err != nil {
 		panic("RabbitMQ 连接失败: " + err.Error())
 	}

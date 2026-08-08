@@ -27,3 +27,13 @@ func DeleteLike(like *model.Likes) error {
 	}
 	return nil
 }
+
+// CountLikes 统计某视频的点赞数（用于批量落库后重置 Redis 计数）
+func CountLikes(videoID int64) (int64, error) {
+	var count int64
+	err := DB.Model(&model.Likes{}).Where("video_id = ?", videoID).Count(&count).Error
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
