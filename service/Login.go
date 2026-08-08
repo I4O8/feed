@@ -12,6 +12,7 @@ var (
 	ErrBanned             = errors.New("账户已被封禁")
 )
 
+// Login 登录：含@按邮箱、否则按手机号查询，验密通过后签发 token
 func Login(input, pwd string) (string, int64, error) {
 	if strings.Contains(input, "@") {
 		acc, err := dao.FindByEmail(input)

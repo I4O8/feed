@@ -95,6 +95,7 @@ func FavStatus(userID, videoID int64) (bool, error) {
 	return dao.FavoriteExists(userID, videoID)
 }
 
+// FavList 我的收藏列表：按收藏记录 id 降序分页，重排视频顺序，已删除自动跳过
 func FavList(userID, cursor int64, limit int) ([]*model.Video, int64, error) {
 	favs, err := dao.ListFavorites(userID, cursor, limit)
 	if err != nil {

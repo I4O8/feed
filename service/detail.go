@@ -25,6 +25,7 @@ const (
 	emptyCacheTTL = 5 * time.Minute
 )
 
+// getCache 读详情缓存：命中哨兵=视频不存在，命中数据=返回，miss=继续查库
 func getCache(videoID int64) (*model.Video, error) {
 	key := videoStaticCachePrefix + strconv.FormatInt(videoID, 10)
 	cached, err := dao.RDB.Get(context.Background(), key).Result()
@@ -43,6 +44,7 @@ func getCache(videoID int64) (*model.Video, error) {
 	return nil, nil // redis.Nil = 正常缓存 miss，继续查库
 }
 
+// setCache 写详情缓存：随机 TTL 防雪崩（1小时 ± 5分钟）
 func setCache(videoID int64, video *model.Video) error {
 	key := videoStaticCachePrefix + strconv.FormatInt(videoID, 10)
 	second := rand.Intn(2*300+1) - 300
@@ -68,6 +70,7 @@ func delCache(videoID int64) {
 	dao.RDB.Del(context.Background(), key)
 }
 
+// fillCount 从 Redis 计数 hash 填充播放/点赞/收藏数（Redis 挂了静默保留 MySQL 兜底）
 func fillCount(video *model.Video) {
 	key := "video:count:" + strconv.FormatInt(video.ID, 10)
 	res, err := dao.RDB.HGetAll(context.Background(), key).Result()
@@ -85,6 +88,7 @@ func fillCount(video *model.Video) {
 	}
 }
 
+// ifGetCached 读缓存并填计数：命中返回视频，miss 返回 nil
 func ifGetCached(videoID int64) (*model.Video, error) {
 	cached, err := getCache(videoID)
 	if err != nil {

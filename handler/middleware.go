@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// AuthMiddleware JWT 鉴权中间件：校验 Bearer token，把 userId 写入上下文
 func AuthMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		token := ctx.GetHeader("Authorization")

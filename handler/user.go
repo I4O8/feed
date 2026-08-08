@@ -129,6 +129,7 @@ func Login(ctx *gin.Context) {
 	})
 }
 
+// UpdateProfile 修改资料：仅登录用户，昵称/简介至少传一个
 func UpdateProfile(ctx *gin.Context) {
 	userIDVal, exists := ctx.Get("UserId")
 	if !exists {
@@ -178,6 +179,7 @@ func GetProfile(ctx *gin.Context) {
 	OK(ctx, profile)
 }
 
+// ChangePassword 修改密码：校验旧密码正确后更新
 func ChangePassword(ctx *gin.Context) {
 	userIDVal, exists := ctx.Get("UserId")
 	if !exists {
@@ -207,6 +209,7 @@ func ChangePassword(ctx *gin.Context) {
 	OK(ctx, nil)
 }
 
+// UploadAvatar 上传头像：校验类型/大小后存储并更新头像
 func UploadAvatar(ctx *gin.Context) {
 	userIDVal, exists := ctx.Get("UserId")
 	if !exists {

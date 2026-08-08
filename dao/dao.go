@@ -71,6 +71,7 @@ func initFavoritesTable() {
 	}
 }
 
+// InitSQL 初始化建表：账号/视频/关注/点赞/收藏 五表
 func InitSQL() {
 	initUserTable()
 	initVideoTable()

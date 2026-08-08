@@ -11,6 +11,7 @@ import (
 
 var ErrPermissionDenied = errors.New("permission denied")
 
+// DeleteVideo 删除视频：校验归属 → 删磁盘文件 → 删数据库记录 → 清缓存
 func DeleteVideo(userID, videoID int64) error {
 	video, err := dao.FindByVideoID(videoID)
 	if err != nil {

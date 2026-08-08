@@ -10,6 +10,7 @@ import (
 	"feed/model"
 )
 
+// StartLikeFlush 启动点赞定时落库：每 10s 刷一次 like:dirty
 func StartLikeFlush() {
 	go func() {
 		ticker := time.NewTicker(10 * time.Second)
@@ -20,6 +21,7 @@ func StartLikeFlush() {
 	}()
 }
 
+// flushLikes 点赞批量落库：遍历脏集合 → 先删 unlike 标记 → 再按状态键补齐 → count(*) 重置计数
 func flushLikes() error {
 	// 第一层：遍历 like:dirty 脏集合，拿到需要同步的视频 id
 	iter := dao.RDB.SScan(context.Background(), "like:dirty", 0, "", 100).Iterator()

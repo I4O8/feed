@@ -58,6 +58,7 @@ func UnLike(userID, videoID int64) error {
 	return nil
 }
 
+// LikeStatus 是否已赞：查 Redis 状态键（短 TTL，过期=未赞）
 func LikeStatus(userID, videoID int64) (bool, error) {
 	video, err := dao.FindByVideoID(videoID)
 	if err != nil {
