@@ -10,6 +10,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// 从Redis中获取统计数据传入
 func listCount(videos []*model.Video) {
 	pipe := dao.RDB.Pipeline()
 	cmds := make([]*redis.MapStringStringCmd, len(videos))

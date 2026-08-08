@@ -43,5 +43,12 @@ func main() {
 	r.GET("/follow/list", handler.AuthMiddleware(), handler.FollowList)
 	r.GET("/follow/fans", handler.AuthMiddleware(), handler.FansList)
 	r.GET("/feed", handler.AuthMiddleware(), handler.Feed)
+	r.POST("/like/:id", handler.AuthMiddleware(), handler.Like)
+	r.DELETE("/like/:id", handler.AuthMiddleware(), handler.UnLike)
+	r.GET("/like/status", handler.AuthMiddleware(), handler.LikeStatus)
+	r.POST("/fav/:id", handler.AuthMiddleware(), handler.Fav)
+	r.DELETE("/fav/:id", handler.AuthMiddleware(), handler.UnFav)
+	r.GET("/fav/status", handler.AuthMiddleware(), handler.FavStatus)
+	r.GET("/fav/list", handler.AuthMiddleware(), handler.FavList)
 	r.Run(":2222")
 }

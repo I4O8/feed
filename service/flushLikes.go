@@ -33,7 +33,22 @@ func flushLikes() error {
 			return err
 		}
 
-		// Scan 匹配该视频所有点赞状态键 like:<videoID>:<userId>
+		// 先删多余：处理 unlike 标记（先删后增，重赞用户会被状态键重新补齐）
+		unLikedUsers, err := dao.RDB.SMembers(context.Background(), "unlike:"+videoIDStr).Result()
+		if err != nil {
+			return err
+		}
+		for _, uidStr := range unLikedUsers {
+			userID, err := strconv.ParseInt(uidStr, 10, 64)
+			if err != nil {
+				return err
+			}
+			if err := dao.DeleteLike(&model.Likes{UserID: userID, VideoID: videoID}); err != nil {
+				return err
+			}
+		}
+
+		// 再按状态键补齐：以 Redis 状态键为权威，把当前真实点赞关系写回 likes 表
 		var cursor uint64
 		for {
 			keys, next, err := dao.RDB.Scan(context.Background(), cursor,
@@ -61,21 +76,6 @@ func flushLikes() error {
 			}
 		}
 
-		// Unlike
-		unLikedUsers, err := dao.RDB.SMembers(context.Background(), "unlike:"+videoIDStr).Result()
-		if err != nil {
-			return err
-		}
-		for _, uidStr := range unLikedUsers {
-			userID, err := strconv.ParseInt(uidStr, 10, 64)
-			if err != nil {
-				return err
-			}
-			if err := dao.DeleteLike(&model.Likes{UserID: userID, VideoID: videoID}); err != nil {
-				return err
-			}
-		}
-
 		// 计数重置：以 MySQL likes 表 count(*) 为准，HSet 只覆盖 like 字段（不影响 play/fav）
 		count, err := dao.CountLikes(videoID)
 		if err != nil {
@@ -86,8 +86,11 @@ func flushLikes() error {
 			return err
 		}
 
-		// 新增同步完成，移除脏标记（失败保留，下次重试）
+		// 同步完成：清理脏标记与 unlike 标记（失败保留，下次重试）
 		if err := dao.RDB.SRem(context.Background(), "like:dirty", videoIDStr).Err(); err != nil {
+			return err
+		}
+		if err := dao.RDB.Del(context.Background(), "unlike:"+videoIDStr).Err(); err != nil {
 			return err
 		}
 	}
