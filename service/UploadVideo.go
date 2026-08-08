@@ -145,6 +145,7 @@ func UploadVideo(video io.Reader, videoName string, cover []byte, coverName stri
 	if err != nil {
 		return -1, "", "", -1, err
 	}
+	delCache(videoID) // 清可能的空值缓存（之前被刷过"不存在"的 id 现在创建了），保证立即可查
 	// feed 扩散：把视频推给上传者的粉丝（尽力而为，失败只记日志，不影响上传）
 	if err := PublishFanoutTask(videoID, userID); err != nil {
 		fmt.Printf("fanout err: %v\n", err)

@@ -71,7 +71,7 @@ func Feed(userID, offset int64, count int) ([]*model.Video, int64, error) {
 			publisherInfo := model.PublisherInfo{Name: "已注销用户", Avatar: ""}
 			videos[i].Publisher = publisherInfo
 		} else {
-			publisherInfo := model.PublisherInfo{Name: account.Name, Avatar: account.Avatar}
+			publisherInfo := model.PublisherInfo{ID: account.ID, Name: account.Name, Avatar: account.Avatar}
 			videos[i].Publisher = publisherInfo
 		}
 	}

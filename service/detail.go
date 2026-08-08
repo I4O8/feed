@@ -4,12 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"feed/dao"
+	"feed/model"
 	"math/rand"
 	"strconv"
 	"time"
-
-	"feed/dao"
-	"feed/model"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -20,12 +19,19 @@ const (
 	videoStaticCachePrefix = "video:staticCache:"
 	videoCountCachePrefix  = "video:countCache:"
 	baseTime               = time.Hour
+	// emptyCacheValue 缓存空值哨兵：标记"该视频不存在"，挡缓存穿透
+	emptyCacheValue = "__NOT_EXIST__"
+	// emptyCacheTTL 空值缓存短 TTL：不长期占位，避免挡住之后真实创建的视频
+	emptyCacheTTL = 5 * time.Minute
 )
 
 func getCache(videoID int64) (*model.Video, error) {
 	key := videoStaticCachePrefix + strconv.FormatInt(videoID, 10)
 	cached, err := dao.RDB.Get(context.Background(), key).Result()
 	if err == nil {
+		if cached == emptyCacheValue { // 命中空值哨兵 → 视频不存在，直接返回，不再查库
+			return nil, ErrVideoNotFound
+		}
 		var video model.Video
 		if err := json.Unmarshal([]byte(cached), &video); err == nil {
 			return &video, nil
@@ -34,7 +40,7 @@ func getCache(videoID int64) (*model.Video, error) {
 	} else if err != redis.Nil {
 		return nil, err
 	}
-	return nil, nil
+	return nil, nil // redis.Nil = 正常缓存 miss，继续查库
 }
 
 func setCache(videoID int64, video *model.Video) error {
@@ -48,6 +54,18 @@ func setCache(videoID int64, video *model.Video) error {
 		return err
 	}
 	return nil
+}
+
+// setEmptyCache 写入空值缓存：查库确认视频不存在后调用，挡缓存穿透；短 TTL 防止挡住后续真实创建
+func setEmptyCache(videoID int64) {
+	key := videoStaticCachePrefix + strconv.FormatInt(videoID, 10)
+	dao.RDB.Set(context.Background(), key, emptyCacheValue, emptyCacheTTL)
+}
+
+// delCache 删除视频详情缓存：写操作（创建/删除视频）后调用，保证缓存与数据库一致
+func delCache(videoID int64) {
+	key := videoStaticCachePrefix + strconv.FormatInt(videoID, 10)
+	dao.RDB.Del(context.Background(), key)
 }
 
 func fillCount(video *model.Video) {
@@ -120,9 +138,11 @@ func GetDetail(videoID int64) (*model.Video, error) {
 		return nil, err
 	}
 	if video == nil {
+		setEmptyCache(videoID) // 查库确认不存在 → 写空值缓存，挡后续穿透
 		return nil, ErrVideoNotFound
 	}
 
+	var id int64
 	var name, avatar string
 	account, err := dao.FindByID(video.Uploader)
 	if err != nil {
@@ -132,11 +152,12 @@ func GetDetail(videoID int64) (*model.Video, error) {
 		name = "已注销的用户"
 		avatar = "" // 约定：avatar 未设置为空字符串，前端显示占位
 	} else {
+		id = account.ID
 		name = account.Name
 		avatar = account.Avatar
 	}
 
-	publisher := model.PublisherInfo{Name: name, Avatar: avatar}
+	publisher := model.PublisherInfo{ID: id, Name: name, Avatar: avatar}
 	video.Publisher = publisher
 
 	if err := setCache(videoID, video); err != nil {

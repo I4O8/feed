@@ -22,6 +22,7 @@ type Video struct {
 
 // PublisherInfo 发布者信息（嵌套在 Video 中）
 type PublisherInfo struct {
+	ID     int64  `json:"id"`     // 发布者用户ID
 	Name   string `json:"name"`   // 发布者昵称
 	Avatar string `json:"avatar"` // 发布者头像URL
 }

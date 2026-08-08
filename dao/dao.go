@@ -23,6 +23,9 @@ func initUserTable() {
 		panic(err)
 	}
 	DB = db
+	if err := setupPool(DB); err != nil { // 显式连接池，与退化版一致（压测公平）
+		panic("连接池设置失败: " + err.Error())
+	}
 	if err := DB.AutoMigrate(&model.Account{}); err != nil {
 		panic("User表创建失败" + err.Error())
 	}

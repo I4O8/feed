@@ -35,6 +35,7 @@ func DeleteVideo(userID, videoID int64) error {
 		if err := dao.DeleteVideo(videoID); err != nil {
 			return err
 		}
+		delCache(videoID) // 清旧快照，防缓存里残留幽灵视频
 		return nil
 	}
 	return ErrPermissionDenied

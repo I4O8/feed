@@ -72,7 +72,7 @@ func List(uploaderID, cursor int64, limit int) ([]*model.Video, int64, error) {
 			publisherInfo := model.PublisherInfo{Name: "已注销用户", Avatar: ""}
 			videos[i].Publisher = publisherInfo
 		} else {
-			publisherInfo := model.PublisherInfo{Name: account.Name, Avatar: account.Avatar}
+			publisherInfo := model.PublisherInfo{ID: account.ID, Name: account.Name, Avatar: account.Avatar}
 			videos[i].Publisher = publisherInfo
 		}
 	}
