@@ -1,0 +1,6 @@
+{
+  "name": "feed",
+  "requests": [
+    {"name": "feed", "method": "GET", "path": "/feed", "query": "offset=0&count=20", "auth": true, "weight": 100}
+  ]
+}

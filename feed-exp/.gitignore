@@ -1,0 +1,10 @@
+# 编译产物
+bench/bench
+seed/seed
+
+# 本机压测产物（别人 clone 后自行生成）
+results/
+data/
+
+# token / 大V 数据（seed 生成，含密钥签名，不进 git）
+*.txt

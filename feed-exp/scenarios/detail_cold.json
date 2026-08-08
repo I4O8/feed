@@ -1,0 +1,6 @@
+{
+  "name": "detail_cold",
+  "requests": [
+    {"name": "detail", "method": "GET", "path": "/video/detail", "query": "videoId={id}", "weight": 100}
+  ]
+}

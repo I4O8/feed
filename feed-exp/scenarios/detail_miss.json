@@ -1,0 +1,6 @@
+{
+  "name": "detail_miss",
+  "requests": [
+    {"name": "detail_miss", "method": "GET", "path": "/video/detail", "query": "videoId={id}", "idRange": "900000001-900000100", "expectedCode": 40400, "weight": 100}
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "name": "mix",
+  "requests": [
+    {"name": "detail",     "method": "GET",  "path": "/video/detail",     "query": "videoId={id}", "idRange": "1-200", "weight": 30},
+    {"name": "list",       "method": "GET",  "path": "/video/list",       "query": "cursor=0&limit=20", "weight": 25},
+    {"name": "feed",       "method": "GET",  "path": "/feed",             "query": "offset=0&count=20", "auth": true, "weight": 20},
+    {"name": "reportPlay", "method": "POST", "path": "/video/reportPlay", "body": "{\"videoId\":{id},\"deviceId\":\"{device}\"}", "weight": 15},
+    {"name": "like",       "method": "POST", "path": "/like/{id}",        "auth": true, "weight": 10}
+  ]
+}

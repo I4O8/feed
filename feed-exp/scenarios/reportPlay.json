@@ -1,0 +1,6 @@
+{
+  "name": "reportPlay",
+  "requests": [
+    {"name": "reportPlay", "method": "POST", "path": "/video/reportPlay", "body": "{\"videoId\":{id},\"deviceId\":\"{device}\"}", "weight": 100}
+  ]
+}

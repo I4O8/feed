@@ -1,0 +1,6 @@
+{
+  "name": "list",
+  "requests": [
+    {"name": "list", "method": "GET", "path": "/video/list", "query": "cursor=0&limit=20", "weight": 100}
+  ]
+}

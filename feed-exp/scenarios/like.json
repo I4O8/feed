@@ -1,0 +1,6 @@
+{
+  "name": "like",
+  "requests": [
+    {"name": "like", "method": "POST", "path": "/like/{id}", "auth": true, "weight": 100}
+  ]
+}
