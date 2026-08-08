@@ -27,6 +27,8 @@ func Like(userID, videoID int64) error {
 		_ = dao.RDB.HIncrBy(context.Background(), "video:count:"+
 			strconv.FormatInt(videoID, 10), "like", 1).Err()
 		_ = dao.RDB.SAdd(context.Background(), "video:dirty", videoID).Err()
+		// 关系表同步标记：通知 flushLikes 该视频点赞关系变了，需同步 likes 表
+		_ = dao.RDB.SAdd(context.Background(), "like:dirty", videoID).Err()
 	}
 	return nil
 }
@@ -47,10 +49,12 @@ func UnLike(userID, videoID int64) error {
 	}
 	_ = dao.RDB.HIncrBy(context.Background(), "video:count:"+
 		strconv.FormatInt(videoID, 10), "like", -1).Err()
-	// 乐观成功：忽略错误；两个标记各自独立，unlike 通知删 likes 表，dirty 通知计数落库
+	// 乐观成功：忽略错误；三个标记各自独立：
+	// unlike 通知删 likes 表、video:dirty 通知计数落库、like:dirty 通知关系同步
 	_ = dao.RDB.SAdd(context.Background(),
 		"unlike:"+strconv.FormatInt(videoID, 10), userID).Err()
 	_ = dao.RDB.SAdd(context.Background(), "video:dirty", videoID).Err()
+	_ = dao.RDB.SAdd(context.Background(), "like:dirty", videoID).Err()
 	return nil
 }
 
