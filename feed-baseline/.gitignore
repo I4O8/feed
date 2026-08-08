@@ -1,0 +1,8 @@
+# 忽略 Markdown 文件
+*.md
+
+# 忽略 docs 目录
+docs/
+data/
+.claude/
+.config/

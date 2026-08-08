@@ -1,0 +1,91 @@
+package dao
+
+import (
+	"feed/config"
+	"feed/model"
+
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
+	"gorm.io/gorm/schema"
+)
+
+var DB *gorm.DB
+
+// initUserTable 初始化USER表
+func initUserTable() {
+	db, err := gorm.Open(mysql.Open(config.Dsn), &gorm.Config{
+		NamingStrategy: schema.NamingStrategy{
+			SingularTable: true,
+		},
+		TranslateError: true, // 唯一键冲突 → gorm.ErrDuplicatedKey
+	})
+	if err != nil {
+		panic(err)
+	}
+	DB = db
+	if err := setupPool(DB); err != nil { // 显式连接池，与优化版一致
+		panic("连接池设置失败: " + err.Error())
+	}
+	if err := DB.AutoMigrate(&model.Account{}); err != nil {
+		panic("User表创建失败" + err.Error())
+	}
+}
+
+// initVideoTable 初始化视频表
+func initVideoTable() {
+	if DB == nil {
+		panic("DB未初始化，请先调用initUserTable()")
+	}
+	if err := DB.AutoMigrate(&model.Video{}); err != nil {
+		panic("Video表创建失败" + err.Error())
+	}
+}
+
+// initFollowsTable 初始化关注表
+func initFollowsTable() {
+	if DB == nil {
+		panic("DB未初始化，请先调用initUserTable()")
+	}
+	if err := DB.AutoMigrate(&model.Follows{}); err != nil {
+		panic("Follows{}表创建失败" + err.Error())
+	}
+}
+
+// initLikesTable 初始化点赞表
+func initLikesTable() {
+	if DB == nil {
+		panic("DB未初始化，请先调用initUserTable()")
+	}
+	if err := DB.AutoMigrate(&model.Likes{}); err != nil {
+		panic("Likes{}表创建失败" + err.Error())
+	}
+}
+
+// initFavoritesTable 初始化收藏表
+func initFavoritesTable() {
+	if DB == nil {
+		panic("DB未初始化，请先调用initUserTable()")
+	}
+	if err := DB.AutoMigrate(&model.Favorites{}); err != nil {
+		panic("Favorites{}表创建失败" + err.Error())
+	}
+}
+
+// initFeedTable 初始化 feed 表（退化版：feed 存 MySQL；优化版存 Redis List，无此表）
+func initFeedTable() {
+	if DB == nil {
+		panic("DB未初始化，请先调用initUserTable()")
+	}
+	if err := DB.AutoMigrate(&model.Feed{}); err != nil {
+		panic("Feed{}表创建失败" + err.Error())
+	}
+}
+
+func InitSQL() {
+	initUserTable()
+	initVideoTable()
+	initFollowsTable()
+	initLikesTable()
+	initFavoritesTable()
+	initFeedTable()
+}
