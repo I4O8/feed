@@ -1,0 +1,1 @@
+import{C as e,h as t,i as n,v as r}from"./index-CzQTXl9m.js";var i={},a={class:`page`};function o(n,i){return e(),r(`div`,a,[...i[0]||=[t(`h1`,null,`消息`,-1),t(`p`,{class:`muted`},`私信 / 通知模块接口定稿后实现`,-1)]])}var s=n(i,[[`render`,o]]);export{s as default};

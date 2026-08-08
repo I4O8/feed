@@ -1,0 +1,1 @@
+function e(e){let t=Number(e)||0;return t>=1e4?(t/1e4).toFixed(1).replace(/\.0$/,``)+`万`:String(t)}function t(e){let t=Math.round(Number(e)||0),n=Math.floor(t/60),r=t%60;return`${n}:${String(r).padStart(2,`0`)}`}export{t as n,e as t};

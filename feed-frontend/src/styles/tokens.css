@@ -1,0 +1,28 @@
+/* 设计令牌：全站统一色板 / 圆角 / 字号 / 间距，禁止在组件里硬编码 */
+:root {
+  /* 色板（仿抖音） */
+  --color-primary: #fe2c55;        /* 抖音标志红：主按钮、强调 */
+  --color-bg: #ffffff;             /* 页面背景 */
+  --color-text: #161823;           /* 主文字 */
+  --color-text-secondary: #8a8b91; /* 次要文字 */
+  --color-border: #f1f1f2;         /* 分割线 / 描边 */
+  --color-input-bg: #f6f6f7;       /* 输入框底 */
+  --color-danger: #fe2c55;         /* 错误提示 */
+  --color-success: #07c160;        /* 成功提示 */
+
+  /* 圆角 */
+  --radius-card: 16px;
+  --radius-btn: 8px;
+  --radius-input: 8px;
+
+  /* 间距 */
+  --space-page: 16px;
+  --space-gap: 12px;
+
+  /* 字号 */
+  --font-xs: 13px;
+  --font-sm: 15px;
+  --font-md: 17px;
+  --font-lg: 20px;
+  --font-xl: 28px;
+}
