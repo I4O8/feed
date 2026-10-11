@@ -6,3 +6,10 @@ docs/
 data/
 .claude/
 .config/
+
+# 忽略前端依赖与构建产物（只留 src，产出物不入库）
+feed-frontend/node_modules/
+feed-frontend/dist/
+
+# 忽略 Redis 快照（运行时产物）
+dump.rdb

@@ -1,1 +1,0 @@
-function e(e){return e.includes(`@`)?`email`:`phone`}var t=e=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e),n=e=>/^1\d{10}$/.test(e),r=e=>typeof e==`string`&&e.length>=6&&e.length<=32;function i(r){return r?e(r)===`email`?t(r)?``:`邮箱格式不正确`:n(r)?``:`手机号格式不正确（11 位，1 开头）`:`请输入手机号或邮箱`}export{i as n,r as t};

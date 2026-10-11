@@ -6,6 +6,8 @@
 
 项目按 **MVC 分层**（handler → service → dao → model）开发，包含完整的 **优化版 / 无优化版后端对比** 与 **性能压测工具**，可以用数据直观量化每一项优化的价值（Redis 缓存、N+1 批量查询、分布式锁、MQ 异步扩散等）。
 
+除「仿短视频」的常规业务外，项目还包含 **点播（VOD）模块** —— 一条独立的**流媒体安全**主线：把 **DRM / 防盗链 / 反盗号 / 泄密溯源** 落实成可运行的代码（授权闸门、CENC 加密、A/B 取证水印、签名 URL）。
+
 ## 功能模块
 
 | 模块 | 功能 |
@@ -16,7 +18,8 @@
 | **Feed** | 关注流 |
 | **点赞** | 点赞 / 取消 / 是否已赞 |
 | **收藏** | 收藏 / 取消 / 是否已收藏 / 我的收藏 |
-| **前端** | 登录注册 / 视频流 / 个人主页 / 点赞收藏 |
+| **点播（VOD）** | 电影上架（NFO 导入）/ 片库浏览 / **播放凭证闸门** / **DRM（CENC+ClearKey、HLS AES-128）** / **A/B 取证水印** / 签名 URL / 电影收藏 / 断点续播 / 观看历史 |
+| **前端** | 登录注册 / 视频流 / 个人主页 / 点赞收藏 / 点播片库与播放 |
 
 ## 接口名单
 
@@ -73,6 +76,109 @@
 | GET | `/fav/status` | 是否已收藏 | 登录 |
 | GET | `/fav/list` | 我的收藏列表 | 登录 |
 
+### 点播 · 管理端
+
+> 鉴权用请求头 **`X-Admin-Key`**（与 `VOD_ADMIN_KEY` 环境变量常量时间比较），不是 JWT。
+
+| 方法 | 路径 | 说明 | 鉴权 |
+|------|------|------|------|
+| POST | `/admin/movie/import` | 按 **NFO** 文件导入电影元数据（multipart，字段 `nfo`）| Admin |
+| POST | `/admin/movie` | 手动新建电影 | Admin |
+| PUT | `/admin/movie/:id` | 修改元数据 | Admin |
+| DELETE | `/admin/movie/:id` | 下架 / 删除 | Admin |
+| POST | `/admin/movie/:id/source` | 上传**母版 A + B**（字段 `sourceA`/`sourceB`）→ 触发异步打包 | Admin |
+| GET | `/admin/movie/:id/status` | 查打包状态 | Admin |
+
+### 点播 · 浏览
+
+| 方法 | 路径 | 说明 | 鉴权 |
+|------|------|------|------|
+| GET | `/movie/list` | 片库列表（`sort=latest/hot/rating` + 分类 + 分页）| 公开 |
+| GET | `/movie/detail` | 电影详情（登录时附「是否收藏 / 观看进度」）| 公开（可选登录）|
+| GET | `/movie/search` | 关键词搜索 | 公开 |
+| POST | `/movie/reportPlay` | 播放上报（Redis 计数）| 公开 |
+
+### 点播 · 播放链路
+
+> 播放凭证走 **ticket**（不透明随机串 + Redis，可即时吊销），**不是 JWT**；`/vod/play` 用 JWT 换 ticket。
+
+| 方法 | 路径 | 说明 | 鉴权 |
+|------|------|------|------|
+| POST | `/vod/play` | 开播：验登录 + 并发检查 + 发 ticket + 分配水印码 | 登录 |
+| GET | `/vod/manifest` | 取 **per-user 动态 manifest**（HLS m3u8 / DASH MPD 文本）| ticket |
+| GET | `/vod/key` | **HLS AES-128** 密钥（per-session）★闸门 | ticket |
+| POST | `/vod/license` | **DASH ClearKey** license（W3C ClearKey JSON）★闸门 | ticket |
+| GET | `/vod/segment` | 分片分发（验签名 + **变体白名单**；HLS 线现加密 / CENC 线直出密文）| 签名 URL |
+| POST | `/vod/heartbeat` | 心跳续期（会话存活 + 续 ticket）| ticket |
+| POST | `/vod/stop` | 结束会话 | ticket |
+
+### 点播 · 观看功能
+
+| 方法 | 路径 | 说明 | 鉴权 |
+|------|------|------|------|
+| POST | `/movie/reportProgress` | 上报播放进度（前端节流）| 登录 |
+| GET | `/movie/progress` | 取单片进度（续播定位）| 登录 |
+| GET | `/movie/history` | 观看历史（按最近观看倒序）| 登录 |
+| POST | `/movie/fav/:id` | 收藏电影 | 登录 |
+| DELETE | `/movie/fav/:id` | 取消收藏 | 登录 |
+| GET | `/movie/fav/status` | 是否已收藏 | 登录 |
+| GET | `/movie/fav/list` | 我的电影收藏 | 登录 |
+
+## 点播（VOD）模块说明
+
+点播模块是项目里的**流媒体安全实践**，与短视频模块并行存在（各占一套表、一套链路），共用账号 / JWT / Redis / RabbitMQ。
+
+**一部电影 = 一组产物**：上架后经**离线流水线**产出多份 rendition（码率 × 加密方案），分发走 **HLS / DASH 分片流式**。
+
+### 两条并行的加密链路
+
+| 链路 | 加密 | 封装 | 密钥分发 |
+|------|------|------|---------|
+| **主线** | **CENC**（ISO 23001-7）| **DASH**（MPD）| **ClearKey**（EME 标准，license 返回 JSON）|
+| **辅线** | **AES-128** | **HLS**（m3u8）| `#EXT-X-KEY` 指向 key URI |
+
+两条线的**加密模型不同**：HLS 线**分发时按会话现加密**（per-session key，磁盘存明文分片）；CENC 线**打包时一次性静态加密**（内容级同一把 key，磁盘存密文分片）。
+
+### 打包流水线
+
+```
+admin 上传母版A + 母版B ──► 落盘 + movie(打包中) ──► 丢 MQ 任务
+                                                      ↓
+   worker: ① 逐片 IDR 分析（校验 A/B 对齐 + 导出段边界）
+           ② remux + 分片（A/B 各一份，段边界由 ① 导出）
+           ③ 加密打包（CENC / AES-128；A/B 用同一把 content key）
+                                                      ↓
+              回写 movie_rendition + content_key + segment_count ──► 状态=就绪
+```
+
+- **打包工具链**：HLS 线用 `ffmpeg`（`-c copy` remux + 按段切分片）；CENC 线用 **GPAC `MP4Box`**（`ffmpeg -f dash` 会**静默忽略**加密参数，退出码仍为 0，不可用 —— 实测结论）。
+- **不做分发侧重编码**：A/B 母版由运营离线产出（grain 种子微扰 + qpfile 对齐 IDR），系统只做**转封装 + 分片 + 加密**，码流比特级复制、零质量损失。
+
+### A/B 取证水印
+
+每个分片编码**两份等长的变体 A/B**；服务端为每个播放会话分配一个二进制码，per-user manifest 按码逐段选 A 或 B —— 每个用户拿到的排列独一无二。泄密后逐段比对还原出码 → 查 `playback_session` → **定位到具体会话 / 用户**。
+
+- **本体轴**（差异来源）：编码期的 grain 种子微扰（离线产出）
+- **载体轴**（per-user 怎么选）：manifest 层的二进制码
+- **关键结论（已实测）**：CENC 分片 `senc` 的 IV **自包含在每个分片里**，所以「A/B 分片互换后用同一把 key 解密」成立。
+
+### 授权闸门（本模块核心）
+
+②③④ 的安全策略全部收敛到 `/vod/key` 与 `/vod/license` 两个端点：
+
+- **播放凭证**用不透明随机串 + Redis（**不用 JWT**）—— 因为要求**可即时吊销**（发现盗号立刻踢人），无状态在此是负担。
+- **并发会话限制**用 ZSET，**原子 Lua** 完成「清死会话 + 判并发 + 加入」（拆三条命令会超卖）。
+- **防伪造靠访问控制**：分片 URL 的签名覆盖**变体位**，服务端校验「请求的变体位 == 本会话被分配的那个」，不符即 403 并记异常。
+
+### 诚实的边界（写在文档里，也是面试加分项）
+
+- **ClearKey 不保护密钥**：license 响应里密钥是明文 base64 —— 这是 W3C 标准如此，明确不承诺抗密钥提取；真要「密钥只在 TEE 里解出」需要 Widevine L1 级厂商证书，个人项目拿不到。**本模块的价值是 CENC 打包 / EME 握手 / license server 架构的教学，不是「密钥保护」。**
+- **CDM 安全等级（L1/L3）超出范围** —— ClearKey CDM 是纯软件实现，无硬件信任根。
+- **水印抗重编码，但实质性再转码（裁切 / 缩放 / 强降噪）无法溯源** —— 业界（含 Netflix）同此，是 forensic watermark 的固有边界。
+- **多账号 / 慢速 / 分布式收集全部变体不可防** —— 靠「变体绑定会话 + 异常检测」抬高成本，**不宣称解决**。
+
+> 完整设计文档见 `docs/点播模块.md`（含威胁模型、表设计、实现记录与踩坑）。
+
 ## 目录结构
 
 ```
@@ -83,7 +189,7 @@ feed/
 ├── dao/                 # 数据访问层
 ├── model/               # 模型
 ├── config/              # 配置（环境变量）
-├── data/                # 静态资源（头像/视频，运行时生成）
+├── data/                # 运行时数据：avatar/ video/ vod/（母版·分片）poster/ nfo/
 ├── docs/                # 设计文档与接口文档（前端构建依据）
 ├── feed-baseline/       # 无优化版后端（:8081，性能对比对照组）
 ├── feed-frontend/       # 前端（Vue 3 + Vite）
@@ -99,9 +205,10 @@ feed/
 | Go | 1.25+ | 后端 |
 | Node.js | 18+ | 前端 |
 | MySQL | 8.x | 主数据库（需建库，如 `feed`）|
-| Redis | — | 缓存 / 计数 / 限流 |
-| RabbitMQ | — | feed 异步扩散（优化版必需）|
-| ffmpeg | — | 视频抽帧、提取时长（上传必需）|
+| Redis | — | 缓存 / 计数 / 限流 / 点播会话 |
+| RabbitMQ | — | feed 异步扩散 + 点播打包任务（优化版必需）|
+| ffmpeg | — | 视频抽帧、提取时长（上传必需）；点播 HLS 分片 |
+| GPAC（MP4Box）| — | **仅点播 CENC 加密分片需要**。Fedora 可 `dnf install gpac` |
 
 ### 1. 启动后端（优化版）
 
@@ -120,6 +227,19 @@ go run .
 - 表结构由 GORM 自动建表（`AutoMigrate`）
 - 默认配置见 `config/config.go`，也可用环境变量覆盖（`DSN` / `JWT_SECRET` / `PORT` / `REDIS_ADDR` 等）
 
+**点播模块相关的环境变量**（不设置则用开发默认值，**生产务必覆盖**）：
+
+| 变量 | 默认 | 说明 |
+|------|------|------|
+| `VOD_DIR` | `./data/vod` | 母版 / 分片 / manifest 根目录 |
+| `VOD_URL_SECRET` | `dev-...` | 分片签名 HMAC 密钥 |
+| `VOD_KEK` | `dev-...` | 内容密钥**信封加密主密钥** |
+| `VOD_ADMIN_KEY` | `dev-admin-key` | 管理端 `X-Admin-Key` |
+| `VOD_MAX_SESSIONS` | `2` | 单用户最大并发播放会话 |
+| `PUBLIC_BASE_URL` | `http://localhost:2222` | manifest 里 license / 分片的绝对地址前缀 |
+| `MP4BOX_BIN` | `MP4Box` | CENC 打包工具路径 |
+| `NFO_DIR` / `POSTER_DIR` | `./data/nfo` / `./data/poster` | NFO 留档 / 海报 |
+
 ### 2. 启动前端
 
 ```bash
@@ -129,8 +249,9 @@ npm run dev
 # 打开 http://localhost:5173
 ```
 
-- 后端已配置 CORS 允许 `http://localhost:5173`
+- 后端已配置 CORS 允许 `http://localhost:5173`（含点播需要的 `X-Admin-Key` 头）
 - 前端需要登录后使用；接口文档见 `docs/`（各模块 .md）
+- **点播播放页需 `shaka-player`**（前端已装）；ClearKey 走 EME，**必须在 `https` 或 `localhost` 下运行**
 
 ### 3. 启动无优化后端（性能对照组）
 
