@@ -71,11 +71,30 @@ func initFavoritesTable() {
 	}
 }
 
-// InitSQL 初始化建表：账号/视频/关注/点赞/收藏 五表
+// initVodTables 初始化点播模块六表：电影 / 产物 / 内容密钥 / 播放会话 / 收藏 / 进度
+// 文档：docs/点播模块.md 七、表设计
+func initVodTables() {
+	if DB == nil {
+		panic("DB未初始化，请先调用initUserTable()")
+	}
+	if err := DB.AutoMigrate(
+		&model.Movie{},
+		&model.MovieRendition{},
+		&model.ContentKey{},
+		&model.PlaybackSession{},
+		&model.MovieFavorite{},
+		&model.MovieProgress{},
+	); err != nil {
+		panic("点播表创建失败" + err.Error())
+	}
+}
+
+// InitSQL 初始化建表：账号/视频/关注/点赞/收藏 五表 + 点播六表
 func InitSQL() {
 	initUserTable()
 	initVideoTable()
 	initFollowsTable()
 	initLikesTable()
 	initFavoritesTable()
+	initVodTables()
 }

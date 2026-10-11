@@ -24,6 +24,16 @@ const (
 	CodeFileTypeUnsupported   = 41500 // 文件类型不支持（图片仅 jpg/png/webp，视频仅 mp4）
 	CodeTooManyRequests       = 42900 // 请求过于频繁（如注册 IP 限流）
 	CodeInternalError         = 50000 // 服务器内部错误（兜底）
+
+	// 点播（VOD）模块新增错误码，文档：docs/点播模块.md 九、错误码
+	CodeVodTicketInvalid    = 40110 // 播放凭证无效 / 已过期
+	CodeAdminKeyInvalid     = 40300 // admin 密钥无效
+	CodeVodConcurrent       = 40301 // 并发会话超限
+	CodeVodDeviceMismatch   = 40302 // 设备不匹配
+	CodeVodVariantForbidden = 40303 // 变体请求越权
+	CodeVodSigInvalid       = 40310 // 签名 URL 无效 / 过期
+	CodeVodMovieNotFound    = 40410 // 电影不存在
+	CodeVodNotReady         = 40411 // 影片资源未就绪（转码打包中）
 )
 
 // OK 统一的 成功 回复函数

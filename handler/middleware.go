@@ -31,3 +31,17 @@ func AuthMiddleware() gin.HandlerFunc {
 		ctx.Next()
 	}
 }
+
+// OptionalAuth 可选登录中间件（点播详情用）：带了有效 token 就写入 UserId，
+// 没带或无效也放行 —— 详情页对未登录用户同样可看，只是不返回「是否收藏 / 进度」
+func OptionalAuth() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		token := ctx.GetHeader("Authorization")
+		if strings.HasPrefix(token, "Bearer ") {
+			if userID, err := service.Parse(strings.TrimPrefix(token, "Bearer ")); err == nil {
+				ctx.Set("UserId", userID)
+			}
+		}
+		ctx.Next()
+	}
+}
